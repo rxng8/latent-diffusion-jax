@@ -40,7 +40,7 @@ defaults:
     timer: True
 
   # Models, Training, and Hyperparameters
-  diffuser: {beta_start: 0.0003, beta_final: 0.04, stage: 5, steps: 200, thidden: 64, hidden: 8, head: 4, group: 4, act: silu}
+  diffuser: {beta_start: 0.0001, beta_final: 0.02, stage: 5, steps: 1000, thidden: 64, hidden: 8, head: 4, group: 4, act: gelu}
   opt: {lr: 1e-4}
   image_size: [64, 64]
   dir_path: "/dev/null"
@@ -49,15 +49,15 @@ defaults:
 
 
 tiny:
-  diffuser: {steps: 200, thidden: 64, hidden: 8, head: 4, group: 4}
+  diffuser: {steps: 1000, thidden: 64, hidden: 8, head: 4, group: 4}
   batch_size: 4
 
 small:
-  diffuser: {steps: 300, thidden: 128, hidden: 16, head: 8, group: 8}
+  diffuser: {steps: 1200, thidden: 128, hidden: 16, head: 8, group: 8}
   batch_size: 4
 
 large:
-  diffuser: {steps: 400, thidden: 256, hidden: 32, head: 8, group: 8}
+  diffuser: {steps: 1400, thidden: 256, hidden: 32, head: 8, group: 8}
   batch_size: 4
 
 monet:

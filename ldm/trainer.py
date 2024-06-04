@@ -70,15 +70,17 @@ class DiffusionTrainer(nj.Module):
   
   def report(self, data):
     _data = self.preprocess(data)
-    x_0, xs = self.diffuser.reverse(_data["image"]) # (B, H, W, C), (T, B, H, W, C)
+    img_shape = data["image"].shape
+    x_0, xs = self.diffuser.reverse(jax.random.normal(nj.seed(), img_shape)) # (B, H, W, C), (T, B, H, W, C)
     _, (outs, loss_mets) = self.loss(_data)
     mets = {}
     mets.update(loss_mets)
-    mets['final'] = x_0
+    mets['final'] = video_grid((x_0 / 2 + 0.5).clip(0, 1)[None])[0] # (B, H, W, C) -> (1, B, H, W, C) -> (1, bH, bW, C) -> (bH, bW, C)
+    seq: jax.Array = (xs / 2 + 0.5).clip(0, 1)[::-1] # (T, B, H, W, C)
     idx = np.linspace(0, self.diffuser._steps - 1, 9).astype(np.int32)
-    mets['image'] = image_grid((jnp.take(xs, idx, axis=0) / 2 + 0.5).clip(0, 1)) # (T->9, B->4, H, W, C)
-    idx = np.linspace(0, self.diffuser._steps - 1, 20).astype(np.int32)
-    mets['video'] = video_grid((jnp.take(xs, idx, axis=0) / 2 + 0.5).clip(0, 1)) # (T->9, B->4, H, W, C)
+    mets['image'] = image_grid(jnp.take(seq, idx, axis=0)) # (T->9, B->4, H, W, C) -> (BH, TW, C)
+    idx = np.linspace(0, self.diffuser._steps - 1, 100).astype(np.int32)
+    mets['video'] = video_grid(jnp.take(seq, idx, axis=0)) # (T->20, B->4, H, W, C) -> (T, bH, bW, C)
     return mets
 
   def loss(self, data):

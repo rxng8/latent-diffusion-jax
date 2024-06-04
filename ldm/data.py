@@ -26,6 +26,7 @@ class SingleDomainDataset:
     self.H = image_size[1]
     self.W = image_size[0]
     self._batch_size = batch_size
+    self.epoch_cnt = 0
 
     # get all image path
     self.domain_A = []
@@ -41,19 +42,27 @@ class SingleDomainDataset:
         return True
     return False
 
-  def _sample_one(self):
-    iA = np.random.randint(0, self._len_A)
+  def _sample_one(self, iA):
+    # iA = np.random.randint(0, self._len_A)
     img_A = np.asarray(Image.open(self.domain_A[iA]))
     img_A = np.asarray(cv2.resize(img_A, (self.W, self.H))) if (self.W, self.H) != img_A.shape[:2] else img_A
     return {"image": img_A}
 
-  def _sample(self):
+  def _sample(self, idx, current):
     batch = []
-    for _ in range(self._batch_size):
-      data = self._sample_one()
+    for i in range(self._batch_size):
+      data = self._sample_one(idx[(current + i) % len(self.domain_A)])
       batch.append(data)
     return {k: np.stack([batch[i][k] for i in range(self._batch_size)], 0) for k in batch[0].keys()}
 
   def dataset(self):
+    idx = np.random.permutation(np.arange(0, len(self.domain_A)))
+    current = 0
     while True:
-      yield self._sample()
+      out = self._sample(idx, current)
+      current += self._batch_size
+      if current >= len(self.domain_A):
+        current = 0
+        idx = np.random.permutation(np.arange(0, len(self.domain_A)))
+        self.epoch_cnt += 1
+      yield out

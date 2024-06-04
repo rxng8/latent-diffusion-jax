@@ -128,7 +128,8 @@ class Diffuser(nj.Module):
     eps = jax.random.normal(nj.seed(), shape=x_0.shape, dtype=x_0.dtype)
     x_t = jnp.sqrt(alpha_bar_t) * x_0 + jnp.sqrt(1 - alpha_bar_t) * eps
     """end of x_t, eps = self.sample_q(x_0, t)"""
-    return x_t.clip(-1, 1), eps
+    # x_t = x_t.clip(-1, 1)
+    return x_t, eps
 
   def reverse_step(self, x_t: jax.Array, t: jax.Array):
     """See algorithm 2 in https://arxiv.org/pdf/2006.11239.pdf"""
@@ -142,7 +143,7 @@ class Diffuser(nj.Module):
     x = (1.0 / jnp.sqrt(alpha_t)) * (
       x_t - ((1 - alpha_t) / jnp.sqrt(1 - alpha_bar_t)) * eps
     ) + sigma_t * z
-    x = x.clip(-1, 1)
+    # x = x.clip(-1, 1)
     return x, x
 
   def reverse(self, x_T: jax.Array) -> jax.Array:
@@ -150,7 +151,7 @@ class Diffuser(nj.Module):
     B, H, W, C = x_T.shape
     # given the noise, reconstruct the image
     # For reverse, we have to reverse it one by one
-    ts = jnp.arange(0, self._steps)[..., None] # (T, 1)
+    ts = jnp.arange(0, self._steps)[:, None] # (T, 1)
     ts = jnp.repeat(ts, B, axis=1) # (T, B)
     x_hat_0, xs = nj.scan(self.reverse_step, x_T, ts, reverse=True, unroll=1, axis=0)
     return x_hat_0, xs

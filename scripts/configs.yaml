@@ -49,7 +49,7 @@ defaults:
 
 
 tiny:
-  diffuser: {steps: 1000, thidden: 64, hidden: 8, head: 8, group: 8}
+  diffuser: {steps: 1000, thidden: 64, hidden: 8, head: 4, group: 4}
 
 small:
   diffuser: {steps: 1200, thidden: 128, hidden: 16, head: 8, group: 8}

@@ -1,70 +1,67 @@
-# defaults:
+defaults:
 
-#   # Experiment Setup
-#   seed: 42
-#   logroot: logs
-#   expname: test
-#   logdir: ""
-#   filter: '.*'
+  # Experiment Setup
+  seed: 42
+  logroot: logs
+  expname: test
+  logdir: ""
+  filter: '.*'
 
-#   # Jax Configuration
-#   jax:
-#     platform: gpu
-#     jit: True
-#     compute_dtype: bfloat16
-#     param_dtype: float32
-#     prealloc: True
-#     checks: False
-#     logical_cpus: 0
-#     debug: False
-#     train_devices: [0]
-#     sync_every: 1
-#     profiler: False
-#     transfer_guard: True
-#     assert_num_devices: -1
-#     fetch_policy_carry: False
-#     nvidia_flags: False
-#     xla_dump: False
+  # Jax Configuration
+  jax:
+    platform: gpu
+    jit: True
+    compute_dtype: bfloat16
+    param_dtype: float32
+    prealloc: True
+    checks: False
+    logical_cpus: 0
+    debug: False
+    train_devices: [0]
+    sync_every: 1
+    profiler: False
+    transfer_guard: True
+    assert_num_devices: -1
+    fetch_policy_carry: False
+    nvidia_flags: False
+    xla_dump: False
 
-#   # Experiment Running Mastermind Config
-#   run:
-#     script: train
-#     steps: 100000 # train steps
-#     duration: 0
-#     log_every: 120
-#     save_every: 900
-#     eval_every: 180
-#     log_zeros: True
-#     from_checkpoint: ''
-#     usage: {psutil: True, nvsmi: True, gputil: False, malloc: False, gc: False}
-#     timer: True
+  # Experiment Running Mastermind Config
+  run:
+    script: train
+    steps: 100000 # train steps
+    duration: 0
+    log_every: 120
+    save_every: 900
+    eval_every: 180
+    log_zeros: True
+    from_checkpoint: ''
+    usage: {psutil: True, nvsmi: True, gputil: False, malloc: False, gc: False}
+    timer: True
 
-#   # Models, Training, and Hyperparameters
-#   generator: {block: 2, hidden: 64, stage: 2, act: relu, norm: instance}
-#   discriminator: {stage: 5, hidden: 64, act: leaky_relu, norm: instance}
-#   opt: {lr: 3e-4}
-#   image_size: [256, 256]
-#   domain_A: "data/null"
-#   domain_B: "data/null"
-#   batch_size: 4
-#   loss_scales: {id: 5.0, gan: 1.0, cycle: 10.0, disc: 1.0}
+  # Models, Training, and Hyperparameters
+  diffuser: {beta_start: 0.0003, beta_final: 0.04, stage: 5, steps: 200, thidden: 64, hidden: 8, head: 4, group: 4, act: silu}
+  opt: {lr: 1e-4}
+  image_size: [64, 64]
+  dir_path: "/dev/null"
+  batch_size: 4
+  loss_scales: {diffuser: 1.0}
 
 
-# tiny:
-#   generator: {block: 9, hidden: 32}
-#   discriminator: {hidden: 32}
-#   batch_size: 4
+tiny:
+  diffuser: {steps: 200, thidden: 64, hidden: 8, head: 4, group: 4}
+  batch_size: 4
 
-# small:
-#   generator: {block: 12, hidden: 64}
-#   discriminator: {hidden: 64}
-#   batch_size: 4
+small:
+  diffuser: {steps: 300, thidden: 128, hidden: 16, head: 8, group: 8}
+  batch_size: 4
 
-# large:
-#   generator: {block: 15, hidden: 128}
-#   discriminator: {hidden: 128}
-#   batch_size: 4
+large:
+  diffuser: {steps: 400, thidden: 256, hidden: 32, head: 8, group: 8}
+  batch_size: 4
 
-# m2p:
-#   domain_A: "data/monet_jpg"
-#   domain_B: "data/photo_jpg"
+monet:
+  dir_path: "data/monet_jpg"
+
+photo:
+  dir_path: "data/photo_jpg"

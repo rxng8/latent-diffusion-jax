@@ -124,7 +124,7 @@ class Diffuser(nj.Module):
     """x_t, eps = self.sample_q(x_0, t): Samples x_t given x_0 by the q(x_t|x_0) formula."""
     # x_0: (B, H, W, C)
     alpha_bar_t = self._alpha_bars.take(t.astype(jnp.int32)) # (B,)
-    alpha_bar_t = alpha_bar_t[: None, None] # (B, 1, 1)
+    alpha_bar_t = alpha_bar_t[:, None, None, None] # (B, 1, 1, 1)
     eps = jax.random.normal(nj.seed(), shape=x_0.shape, dtype=x_0.dtype)
     x_t = jnp.sqrt(alpha_bar_t) * x_0 + jnp.sqrt(1 - alpha_bar_t) * eps
     """end of x_t, eps = self.sample_q(x_0, t)"""
@@ -146,6 +146,7 @@ class Diffuser(nj.Module):
     return x, x
 
   def reverse(self, x_T: jax.Array) -> jax.Array:
+    # (B, H, W, C) -> (B, H, W, C) -> (T, B, H, W, C)
     B, H, W, C = x_T.shape
     # given the noise, reconstruct the image
     # For reverse, we have to reverse it one by one

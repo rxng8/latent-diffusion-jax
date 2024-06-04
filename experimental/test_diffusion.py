@@ -14,12 +14,16 @@ import embodied
 from embodied import nn
 from embodied.nn import ninjax as nj
 
+from ldm.trainer import DiffusionTrainer
+
+
+
 warnings.filterwarnings('ignore', '.*input data to the valid range.*')
 
 jax.config.update("jax_debug_nans", True)
 # jax.config.update("jax_disable_jit", True)
 
-transform = lambda x: x / 255.0 * 2 - 1
+# transform = lambda x: x / 255.0 * 2 - 1
 untransform = lambda x: ((x / 2 + 0.5) * 255.0).astype(np.uint8)
 
 
@@ -45,12 +49,13 @@ config = embodied.Config(
   ),
   opt=dict(
     lr=1e-4 # changing to larger learning rate make it nan
-  )
+  ),
+  loss_scales={"diffuser": 1.0}
 )
-T = Trainer(config, name="T")
+T = DiffusionTrainer(config, name="T")
 img = Image.open("auxiliary/elefant.jpg")
 img = img.resize((64, 64))
-img = transform(np.asarray(img))
+# img = transform(np.asarray(img))
 img = jnp.asarray(img)[None]
 data = {"image": img}
 

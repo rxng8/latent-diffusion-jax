@@ -25,20 +25,21 @@ from .nets import Diffuser
 def image_grid(inputs: jax.Array):
   # inputs: T, B, H, W, C
   T, B, H, W, C = inputs.shape
-  b = max(B, 4)
-  out = out[:, :b]
+  b = min(B, 4)
+  out = inputs[:, :b]
   out = out.transpose([1, 2, 0, 3, 4])
-  out = out.rehshape((b*H, T, W, C)).reshape((b*H, T*W, C))
+  out = out.reshape((b*H, T, W, C)).reshape((b*H, T*W, C))
   return out
 
 def video_grid(inputs: jax.Array):
   T, B, H, W, C = inputs.shape
   b = int(np.sqrt(B))
-  b = max(b, 4)
+  b = min(b, 4)
   out = inputs[:, :b*b]
   out = out.reshape((T, b, b, H, W, C))
   out = out.transpose([0, 1, 3, 2, 4, 5])
   out = out.reshape((T, b*H, b, W, C)).reshape((T, b*H, b*W, C))
+  return out
 
 class DiffusionTrainer(nj.Module):
   def __init__(self, config):
@@ -59,8 +60,7 @@ class DiffusionTrainer(nj.Module):
 
   def train(self, data):
     _data = self.preprocess(data)
-    opt_metrics, (outs, loss_metrics) = self.opt(self.modules,
-      self.loss, _data, has_aux=True)
+    opt_metrics, (outs, loss_metrics) = self.opt(self.modules, self.loss, _data, has_aux=True)
     opt_metrics.update(loss_metrics)
     return outs, opt_metrics
 

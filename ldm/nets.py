@@ -134,10 +134,10 @@ class Diffuser(nj.Module):
     """See algorithm 2 in https://arxiv.org/pdf/2006.11239.pdf"""
     B, H, W, C = x_t.shape
     (B,) = t.shape
-    alpha_t = jnp.take(self._alphas, t)
-    alpha_bar_t = jnp.take(self._alpha_bars, t)
-    sigma_t = jnp.sqrt(jnp.take(self._betas, t))
-    z = (t > 0) * jax.random.normal(nj.seed(), shape=x_t.shape, dtype=x_t.dtype)
+    alpha_t = jnp.take(self._alphas, t)[:, None, None, None] # (B,) -> (B, H, W, C)
+    alpha_bar_t = jnp.take(self._alpha_bars, t)[:, None, None, None] # (B,) -> (B, H, W, C)
+    sigma_t = jnp.sqrt(jnp.take(self._betas, t))[:, None, None, None] # (B,) -> (B, H, W, C)
+    z = (t > 0)[:, None, None, None] * jax.random.normal(nj.seed(), shape=x_t.shape, dtype=x_t.dtype)
     eps = self.unet(x_t, t)
     x = (1.0 / jnp.sqrt(alpha_t)) * (
       x_t - ((1 - alpha_t) / jnp.sqrt(1 - alpha_bar_t)) * eps

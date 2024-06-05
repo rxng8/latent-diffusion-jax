@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="resources/figs/rickroll.gif" />
+</p>
+
+
 # Latent Diffusion Model
 
 A simple and organized implementation of the Latent Diffusion Model algorithm

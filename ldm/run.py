@@ -61,13 +61,13 @@ class ParamsHandler:
 def make_trainer(config) -> DiffusionTrainer:
   return DiffusionTrainer(config, name="diff")
 
-def make_dataloader(config) -> SingleDomainDataset:
+def make_dataloader(config, mode="train") -> SingleDomainDataset:
   if config.dir_path == "elefant":
-    dataloader = ElefantDataset(config.diffuser.steps, config.image_size, config.batch_size)
+    dataloader = ElefantDataset(config.diffuser.steps, config.image_size, config.batch_size, mode=mode)
   elif config.path_A:
-    dataloader = TwoDomainDataset(config.diffuser.steps, config.path_A, config.path_B, config.image_size, config.batch_size)
+    dataloader = TwoDomainDataset(config.diffuser.steps, config.path_A, config.path_B, config.image_size, config.batch_size, mode=mode)
   else:
-    dataloader = SingleDomainDataset(config.diffuser.steps, config.dir_path, config.image_size, config.batch_size)
+    dataloader = SingleDomainDataset(config.diffuser.steps, config.dir_path, config.image_size, config.batch_size, mode=mode)
   return dataloader
 
 def setup_jax(jaxcfg):

@@ -103,7 +103,9 @@ class Diffuser(nj.Module):
   # implement the algorithm from https://arxiv.org/pdf/2006.11239.pdf
   # adapt from: https://github.com/andylolu2/jax-diffusion/blob/main/jax_diffusion/diffusion.py
   def __init__(self, beta_start: float, beta_final: float, steps: int):
-    """_summary_
+    """NOTE: np.random does not work in jitted function due to the same state and seed. Make sure you take it
+      outside. Also, jax.random.randint as indices => cannot take from array.
+      Workaround: get all the beta, alpha, sigma in the sampling phase
 
     Args:
       beta_start (float): the beta/variance of x_0 or the observation/frame/image
@@ -145,7 +147,7 @@ class Diffuser(nj.Module):
     # x = x.clip(-1, 1)
     return x, x
 
-  def reverse(self, x_T: jax.Array, cond: jax.Array) -> jax.Array:
+  def reverse(self, x_T: jax.Array, cond: jax.Array, alpha, alpha_bar, sigma) -> jax.Array:
     # (B, H, W, C) -> (B,) => (B, H, W, C) -> (T, B, H, W, C)
     B, H, W, C = x_T.shape
     # given the noise, reconstruct the image
@@ -153,7 +155,10 @@ class Diffuser(nj.Module):
     ts = jnp.arange(0, self._steps)[:, None] # (T, 1)
     ts = jnp.repeat(ts, B, axis=1) # (T, B)
     conds = jnp.repeat(cond[None], self._steps, axis=0)
-    xs = (ts, conds)
+    alpha_t = jnp.repeat(alpha[:, None], B, axis=1)
+    alpha_bar_t = jnp.repeat(alpha_bar[:, None], B, axis=1)
+    sigma_t = jnp.repeat(sigma[:, None], B, axis=1)
+    xs = (ts, conds, alpha_t, alpha_bar_t, sigma_t)
     x_hat_0, xs = nj.scan(self.reverse_step, x_T, xs, reverse=True, unroll=1, axis=0)
     return x_hat_0, xs
   

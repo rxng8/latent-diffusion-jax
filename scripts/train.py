@@ -38,8 +38,8 @@ def main(argv):
   if config.run.script == "train":
     train_eval(
       make_trainer=bind(make_trainer, config),
-      make_dataloader_train=bind(make_dataloader, config),
-      make_dataloader_eval=bind(make_dataloader, config),
+      make_dataloader_train=bind(make_dataloader, config, mode="train"),
+      make_dataloader_eval=bind(make_dataloader, config, mode="eval"),
       make_logger=bind(embodied.api.make_logger, config),
       config=config
     )

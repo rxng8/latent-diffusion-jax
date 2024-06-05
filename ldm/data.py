@@ -15,10 +15,11 @@ from PIL import Image
 import cv2
 
 import embodied
+from .beta_sampler import BetaSampler
 
 
 class ElefantDataset:
-  def __init__(self, diffuser_steps, image_size=(64, 64), batch_size=16) -> None:
+  def __init__(self, diffuser_steps, image_size=(64, 64), batch_size=16, mode="train") -> None:
     self._batch_size = batch_size
     elefant = pathlib.Path(__file__).parent / "elefant.jpg"
     elefant = Image.open(elefant)
@@ -27,9 +28,13 @@ class ElefantDataset:
     elefant = np.repeat(elefant, batch_size, 0) # (B, H, W, C)
     self.elefant = {"image": elefant, "class": np.zeros((batch_size))}
     self._steps = diffuser_steps
+    self.beta_sampler = BetaSampler(0.0001, 0.02, 1000)
+    self._mode = mode
 
   def _sample(self):
-    return {**self.elefant, "t": np.random.randint(0, self._steps, self._batch_size)}
+    t = np.random.randint(0, self._steps, self._batch_size)
+    data = {**self.elefant, "t": t, **self.beta_sampler(t)}
+    return data
 
   def dataset(self):
     while True:

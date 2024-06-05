@@ -70,10 +70,13 @@ class DiffusionTrainer(nj.Module):
   
   def report(self, data):
     _data = self.preprocess(data)
+    alpha = _data["alpha"] 
+    alpha_bar =  _data["alpha_bar"]
+    sigma = _data["sigma"]
     img_shape = data["image"].shape
     noise_img = jax.random.normal(nj.seed(), img_shape)
     cond = jax.random.randint(nj.seed(), (self.config.batch_size,), 0, 2) # (B,)
-    x_0, xs = self.diffuser.reverse(noise_img, cond) # (B, H, W, C), (T, B, H, W, C)
+    x_0, xs = self.diffuser.reverse(noise_img, cond, alpha, alpha_bar, sigma) # (B, H, W, C), (T, B, H, W, C)
     _, (outs, loss_mets) = self.loss(_data)
     mets = {}
     mets.update(loss_mets)

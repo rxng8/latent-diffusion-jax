@@ -110,21 +110,18 @@ class Diffuser(nj.Module):
       beta_final (float): the beta/variance of x_T-1 or the latent/diffused noise
       steps (int): the total number of steps in the mdp
     """
-    self._betas = np.linspace(beta_start, beta_final, steps) # (T,)
-    self._alphas = 1 - self._betas # (T,)
-    self._alpha_bars = np.cumprod(self._alphas) # (T,)
+    
     self._steps = steps # ()
     self.unet = NoiseEstimatorUNet(self.hidden, stage = self.stage, head = self.head,
       group = self.group, thidden = self.thidden, ahidden=self.ahidden, act = self.act, name="unet")
 
-  def forward(self, x_0: jax.Array, t: jax.Array) -> jax.Array:
+  def forward(self, x_0: jax.Array, alpha_bar_t: jax.Array) -> jax.Array:
     # given the image, add noise to it. See algorithm 1 in https://arxiv.org/pdf/2006.11239.pdf
     # For forward, we can compute a random t
     B, H, W, C = x_0.shape
-    (B,) = t.shape
     """x_t, eps = self.sample_q(x_0, t): Samples x_t given x_0 by the q(x_t|x_0) formula."""
     # x_0: (B, H, W, C)
-    alpha_bar_t = self._alpha_bars.take(t.astype(jnp.int32)) # (B,)
+    # alpha_bar_t = self._alpha_bars[np.asarray(t).astype(np.int32)] # (B,)
     alpha_bar_t = alpha_bar_t[:, None, None, None] # (B, 1, 1, 1)
     eps = jax.random.normal(nj.seed(), shape=x_0.shape, dtype=x_0.dtype)
     x_t = jnp.sqrt(alpha_bar_t) * x_0 + jnp.sqrt(1 - alpha_bar_t) * eps
@@ -133,13 +130,13 @@ class Diffuser(nj.Module):
     return x_t, eps
 
   def reverse_step(self, x_t: jax.Array, xs: tuple):
-    t, cond = xs # (B,), (B,)
+    t, cond, alpha_t, alpha_bar_t, sigma_t = xs # (B,), (B,)
     """See algorithm 2 in https://arxiv.org/pdf/2006.11239.pdf"""
     B, H, W, C = x_t.shape
     (B,) = t.shape
-    alpha_t = jnp.take(self._alphas, t)[:, None, None, None] # (B,) -> (B, H, W, C)
-    alpha_bar_t = jnp.take(self._alpha_bars, t)[:, None, None, None] # (B,) -> (B, H, W, C)
-    sigma_t = jnp.sqrt(jnp.take(self._betas, t))[:, None, None, None] # (B,) -> (B, H, W, C)
+    alpha_t = alpha_t[:, None, None, None] # (B,) -> (B, H, W, C)
+    alpha_bar_t = alpha_bar_t[:, None, None, None] # (B,) -> (B, H, W, C)
+    sigma_t = sigma_t[:, None, None, None] # (B,) -> (B, H, W, C)
     z = (t > 0)[:, None, None, None] * jax.random.normal(nj.seed(), shape=x_t.shape, dtype=x_t.dtype)
     eps = self.unet(x_t, t, cond[:, None, None])
     x = (1.0 / jnp.sqrt(alpha_t)) * (

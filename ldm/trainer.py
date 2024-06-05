@@ -90,16 +90,15 @@ class DiffusionTrainer(nj.Module):
     B, H, W, C = x_0.shape
 
     # Generate random timesteps indices
-    timesteps = np.random.randint(0, self.diffuser._steps, (B,))
-    timesteps = nn.cast(timesteps)
-
-    # data["class"]: (jnp.int32) (B,)
-    cond = data["class"][:, None, None] # (B, 1, 1)
+    timesteps = data["t"]
+    alpha_bar_t = data["alpha_bar_t"]
 
     # Generating the noise and noisy image for this batch
     # Add noise to x_0 until timestep
-    noisy_image, noise = self.diffuser.forward(x_0, timesteps)
+    noisy_image, noise = self.diffuser.forward(x_0, alpha_bar_t)
 
+    # data["class"]: (jnp.int32) (B,)
+    cond = data["class"][:, None, None] # (B, 1, 1)
     # Forward noising: given a noisy image, predict the noise added to that image
     pred_noise = self.diffuser.unet(noisy_image, timesteps, cond)
 

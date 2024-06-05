@@ -18,7 +18,7 @@ import embodied
 
 
 class ElefantDataset:
-  def __init__(self, image_size=(64, 64), batch_size=16) -> None:
+  def __init__(self, diffuser_steps, image_size=(64, 64), batch_size=16) -> None:
     self._batch_size = batch_size
     elefant = pathlib.Path(__file__).parent / "elefant.jpg"
     elefant = Image.open(elefant)
@@ -26,25 +26,25 @@ class ElefantDataset:
     elefant = np.asarray(elefant)[None]
     elefant = np.repeat(elefant, batch_size, 0) # (B, H, W, C)
     self.elefant = {"image": elefant, "class": np.zeros((batch_size))}
+    self._steps = diffuser_steps
 
   def _sample(self):
-    return self.elefant.copy()
+    return {**self.elefant, "t": np.random.randint(0, self._steps, self._batch_size)}
 
   def dataset(self):
     while True:
       yield self._sample()
 
-class ModalityDataset:
-  pass
 
 class SingleDomainDataset:
-  def __init__(self, dir_path: str|pathlib.Path|embodied.Path, image_size=(256, 256), batch_size=16) -> None:
+  def __init__(self, diffuser_steps: int, dir_path: str|pathlib.Path|embodied.Path, image_size=(256, 256), batch_size=16) -> None:
     self.path_A = pathlib.Path(dir_path).resolve()
     print(f"loading 1 domains from {self.path_A}")
     self.H = image_size[1]
     self.W = image_size[0]
     self._batch_size = batch_size
     self.epoch_cnt = 0
+    self._steps = diffuser_steps
 
     # get all image path
     self.domain_A = []
@@ -73,6 +73,8 @@ class SingleDomainDataset:
       batch.append(data)
     data = {k: np.stack([batch[i][k] for i in range(self._batch_size)], 0) for k in batch[0].keys()}
     data["class"] = np.zeros((self._batch_size,))
+    data["t"] = np.random.randint(0, self._steps, self._batch_size)
+    return data
 
   def dataset(self):
     idx = np.random.permutation(np.arange(0, len(self.domain_A)))
@@ -87,7 +89,7 @@ class SingleDomainDataset:
       yield out
 
 class TwoDomainDataset:
-  def __init__(self, path_A: str|pathlib.Path|embodied.Path, path_B: str|pathlib.Path|embodied.Path, image_size=(256, 256), batch_size=16) -> None:
+  def __init__(self, diffuser_steps: int, path_A: str|pathlib.Path|embodied.Path, path_B: str|pathlib.Path|embodied.Path, image_size=(256, 256), batch_size=16) -> None:
     self.path_A = pathlib.Path(path_A).resolve()
     self.path_B = pathlib.Path(path_B).resolve()
     print(f"loading 1 domains from {self.path_A}")
@@ -96,6 +98,7 @@ class TwoDomainDataset:
     self.W = image_size[0]
     self._batch_size = batch_size
     self.epoch_cnt = 0
+    self._steps = diffuser_steps
 
     # get all image path
     self.domain_A = []
@@ -137,7 +140,9 @@ class TwoDomainDataset:
       else:
         data = self._sample_one_B(id - self._len_A)
       batch.append(data)
-    return {k: np.stack([batch[i][k] for i in range(self._batch_size)], 0) for k in batch[0].keys()}
+    data = {k: np.stack([batch[i][k] for i in range(self._batch_size)], 0) for k in batch[0].keys()}
+    data["t"] = np.random.randint(0, self._steps, self._batch_size)
+    return data
 
   def dataset(self):
     idx = np.random.permutation(np.arange(0, len(self.domain_A) + len(self.domain_B)))

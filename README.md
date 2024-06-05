@@ -13,6 +13,6 @@ A simple and organized implementation of the Latent Diffusion Model algorithm
 conda create -n ldm python=3.10
 conda activate ldm
 bash install.sh
-python scripts/train.py --expname roll
+python scripts/train.py
 ```
 

@@ -1,6 +1,6 @@
-# CycleGAN-jax
+# Latent Diffusion Model
 
-A simple and organized implementation of the CycleGAN algorithm
+A simple and organized implementation of the Latent Diffusion Model algorithm
 
 
 * How to run:
@@ -8,6 +8,6 @@ A simple and organized implementation of the CycleGAN algorithm
 conda create -n ldm python=3.10
 conda activate ldm
 bash install.sh
-# python scripts/train.py --configs m2p tiny --expname monet2photo_experiment
+python scripts/train.py --expname roll
 ```
 

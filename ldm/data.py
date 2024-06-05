@@ -194,7 +194,10 @@ class RollingDataset:
 
   def _sample_one(self, iA):
     # iA = np.random.randint(0, self._len_A)
-    img_A = np.asarray(Image.open(self.domain_A[iA]))
+    img_A = Image.open(self.domain_A[iA])
+    img_A = img_A.convert('RGB') if img_A.mode == "RGBA" else img_A
+    img_A = np.asarray(img_A)
+    
     img_A = np.asarray(cv2.resize(img_A, (self.W, self.H))) if (self.W, self.H) != img_A.shape[:2] else img_A
     return {"image": img_A}
 

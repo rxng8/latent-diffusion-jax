@@ -29,7 +29,7 @@ defaults:
   # Experiment Running Mastermind Config
   run:
     script: train
-    steps: 100000 # train steps
+    steps: 1000000 # train steps
     duration: 0
     log_every: 120
     save_every: 900

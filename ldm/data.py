@@ -19,21 +19,21 @@ from .beta_sampler import BetaSampler
 
 
 class ElefantDataset:
-  def __init__(self, diffuser_steps, image_size=(64, 64), batch_size=16, mode="train") -> None:
-    self._batch_size = batch_size
+  def __init__(self, config, mode="train") -> None:
+    self._batch_size = config.batch_size
     elefant = pathlib.Path(__file__).parent / "elefant.jpg"
     elefant = Image.open(elefant)
-    elefant = elefant.resize(image_size)
+    elefant = elefant.resize(config.image_size)
     elefant = np.asarray(elefant)[None]
-    elefant = np.repeat(elefant, batch_size, 0) # (B, H, W, C)
-    self.elefant = {"image": elefant, "class": np.zeros((batch_size))}
-    self._steps = diffuser_steps
-    self.beta_sampler = BetaSampler(0.0001, 0.02, 1000)
+    elefant = np.repeat(elefant, config.batch_size, 0) # (B, H, W, C)
+    self.elefant = {"image": elefant, "class": np.zeros((config.batch_size))}
+    self._steps = config.diffuser_steps
+    self.beta_sampler = BetaSampler(config.diffuser_steps, **config.beta_sampler)
     self._mode = mode
 
   def _sample(self):
-    t = np.random.randint(0, self._steps, self._batch_size)
-    data = {**self.elefant, "t": t, **self.beta_sampler(t)}
+    t = np.random.randint(0, self._steps, size=(self._batch_size,))
+    data = {**self.elefant, **self.beta_sampler(t)}
     return data
 
   def dataset(self):
@@ -42,14 +42,17 @@ class ElefantDataset:
 
 
 class SingleDomainDataset:
-  def __init__(self, diffuser_steps: int, dir_path: str|pathlib.Path|embodied.Path, image_size=(256, 256), batch_size=16) -> None:
-    self.path_A = pathlib.Path(dir_path).resolve()
+  def __init__(self, config, mode="train") -> None:
+    self.path_A = pathlib.Path(config.dir_path).resolve()
     print(f"loading 1 domains from {self.path_A}")
+    image_size = config.image_size
     self.H = image_size[1]
     self.W = image_size[0]
-    self._batch_size = batch_size
+    self._batch_size = config.batch_size
     self.epoch_cnt = 0
-    self._steps = diffuser_steps
+    self._steps = config.diffuser_steps
+    self.beta_sampler = BetaSampler(config.diffuser_steps, **config.beta_sampler)
+    self._n_classes = config.n_classes
 
     # get all image path
     self.domain_A = []
@@ -77,9 +80,8 @@ class SingleDomainDataset:
       data = self._sample_one(idx[(current + i) % len(self.domain_A)])
       batch.append(data)
     data = {k: np.stack([batch[i][k] for i in range(self._batch_size)], 0) for k in batch[0].keys()}
-    data["class"] = np.zeros((self._batch_size,))
-    data["t"] = np.random.randint(0, self._steps, self._batch_size)
-    return data
+    t = np.random.randint(0, self._steps, (self._batch_size,))
+    return {**data, **self.beta_sampler(t), "class": np.zeros((self._batch_size,))}
 
   def dataset(self):
     idx = np.random.permutation(np.arange(0, len(self.domain_A)))
@@ -94,16 +96,17 @@ class SingleDomainDataset:
       yield out
 
 class TwoDomainDataset:
-  def __init__(self, diffuser_steps: int, path_A: str|pathlib.Path|embodied.Path, path_B: str|pathlib.Path|embodied.Path, image_size=(256, 256), batch_size=16) -> None:
-    self.path_A = pathlib.Path(path_A).resolve()
-    self.path_B = pathlib.Path(path_B).resolve()
+  def __init__(self, config, mode="train") -> None:
+    self.path_A = pathlib.Path(config.path_A).resolve()
+    self.path_B = pathlib.Path(config.path_B).resolve()
     print(f"loading 1 domains from {self.path_A}")
     print(f"loading 1 domains from {self.path_B}")
+    image_size = config.image_size
     self.H = image_size[1]
     self.W = image_size[0]
-    self._batch_size = batch_size
+    self._batch_size = config.batch_size
     self.epoch_cnt = 0
-    self._steps = diffuser_steps
+    self._steps = config.diffuser_steps
 
     # get all image path
     self.domain_A = []
@@ -117,6 +120,8 @@ class TwoDomainDataset:
       if self._check_image(fname):
         self.domain_B.append(self.path_B / fname)
     self._len_B = len(self.domain_B)
+
+    self.beta_sampler = BetaSampler(config.diffuser_steps, **config.beta_sampler)
 
   def _check_image(self, fname: str):
     accepted = [".png", ".jpg", ".jpeg"]
@@ -146,8 +151,8 @@ class TwoDomainDataset:
         data = self._sample_one_B(id - self._len_A)
       batch.append(data)
     data = {k: np.stack([batch[i][k] for i in range(self._batch_size)], 0) for k in batch[0].keys()}
-    data["t"] = np.random.randint(0, self._steps, self._batch_size)
-    return data
+    t = np.random.randint(0, self._steps, (self._batch_size,))
+    return {**data, **self.beta_sampler(t)}
 
   def dataset(self):
     idx = np.random.permutation(np.arange(0, len(self.domain_A) + len(self.domain_B)))

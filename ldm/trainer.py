@@ -44,7 +44,7 @@ def video_grid(inputs: jax.Array):
 class DiffusionTrainer(nj.Module):
   def __init__(self, config):
     self.config = config
-    self.diffuser = Diffuser(**config.diffuser, name="diff")
+    self.diffuser = Diffuser(config.diffuser_steps, **config.diffuser, name="diff")
     self.opt = nn.Optimizer(**config.opt, name="opt")
     self.modules = [self.diffuser]
 
@@ -75,7 +75,7 @@ class DiffusionTrainer(nj.Module):
     sigma = _data["sigma"]
     img_shape = data["image"].shape
     noise_img = jax.random.normal(nj.seed(), img_shape)
-    cond = jax.random.randint(nj.seed(), (self.config.batch_size,), 0, 2) # (B,)
+    cond = jax.random.randint(nj.seed(), (self.config.batch_size,), 0, self.config.n_classes) # (B,)
     x_0, xs = self.diffuser.reverse(noise_img, cond, alpha, alpha_bar, sigma) # (B, H, W, C), (T, B, H, W, C)
     _, (outs, loss_mets) = self.loss(_data)
     mets = {}

@@ -40,7 +40,9 @@ defaults:
     timer: True
 
   # Models, Training, and Hyperparameters
-  diffuser: {beta_start: 0.0001, beta_final: 0.02, stage: 3, steps: 1000, thidden: 512, ahidden: 128, hidden: 128, head: 8, group: 8, act: silu}
+  diffuser: {stage: 3, thidden: 128, ahidden: 128, hidden: 128, head: 8, group: 8, act: silu}
+  beta_sampler: {mode: linear, beta_start: 0.0001, beta_final: 0.02}
+  diffuser_steps: 1000
   opt: {lr: 3e-4}
   image_size: [64, 64]
   dir_path: "/dev/null"
@@ -48,27 +50,35 @@ defaults:
   path_B: ""
   batch_size: 16
   loss_scales: {diffuser: 1.0}
+  n_classes: 1
 
 
 tiny:
-  diffuser: {steps: 1000, thidden: 256, ahidden: 128, hidden: 128, head: 8, group: 8}
+  diffuser: {thidden: 256, ahidden: 128, hidden: 128, head: 8, group: 8}
+  diffuser_steps: 1000
 
 small:
-  diffuser: {steps: 1200, thidden: 512, ahidden: 256, hidden: 256, head: 8, group: 8}
+  diffuser: {thidden: 512, ahidden: 256, hidden: 256, head: 8, group: 8}
+  diffuser_steps: 1200
 
 large:
-  diffuser: {steps: 1400, thidden: 1024, ahidden: 512, hidden: 512, head: 8, group: 8}
+  diffuser: {thidden: 1024, ahidden: 512, hidden: 512, head: 8, group: 8}
+  diffuser_steps: 1400
 
 monet:
   dir_path: "data/monet_jpg"
+  n_classes: 1
 
 photo:
   dir_path: "data/photo_jpg"
+  n_classes: 1
 
 elefant:
   dir_path: "elefant"
+  n_classes: 1
 
 m2p:
   dir_path: ""
   path_A: "data/monet_jpg"
   path_B: "data/photo_jpg"
+  n_classes: 2

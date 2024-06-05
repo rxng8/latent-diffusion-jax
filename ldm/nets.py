@@ -102,7 +102,7 @@ class Diffuser(nj.Module):
 
   # implement the algorithm from https://arxiv.org/pdf/2006.11239.pdf
   # adapt from: https://github.com/andylolu2/jax-diffusion/blob/main/jax_diffusion/diffusion.py
-  def __init__(self, beta_start: float, beta_final: float, steps: int):
+  def __init__(self, steps: int):
     """NOTE: np.random does not work in jitted function due to the same state and seed. Make sure you take it
       outside. Also, jax.random.randint as indices => cannot take from array.
       Workaround: get all the beta, alpha, sigma in the sampling phase
@@ -123,7 +123,6 @@ class Diffuser(nj.Module):
     B, H, W, C = x_0.shape
     """x_t, eps = self.sample_q(x_0, t): Samples x_t given x_0 by the q(x_t|x_0) formula."""
     # x_0: (B, H, W, C)
-    # alpha_bar_t = self._alpha_bars[np.asarray(t).astype(np.int32)] # (B,)
     alpha_bar_t = alpha_bar_t[:, None, None, None] # (B, 1, 1, 1)
     eps = jax.random.normal(nj.seed(), shape=x_0.shape, dtype=x_0.dtype)
     x_t = jnp.sqrt(alpha_bar_t) * x_0 + jnp.sqrt(1 - alpha_bar_t) * eps

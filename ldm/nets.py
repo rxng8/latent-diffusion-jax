@@ -22,15 +22,16 @@ from embodied.nn import sg
 class NoiseEstimatorUNet(nj.Module):
 
   stage: int = 3
-  head: int = 1
-  group: int = 1
-  thidden: int = 32
+  head: int = 8
+  group: int = 8
+  thidden: int = 512
+  ahidden: int = 128
   act: str = "gelu"
 
   def __init__(self, hidden: int) -> None:
     self._hidden = hidden
 
-  def __call__(self, imgnoi: jax.Array, timeid: jax.Array, condition: jax.Array=None) -> jax.Array:
+  def __call__(self, imgnoi: jax.Array, timeid: jax.Array, condition: jax.Array) -> jax.Array:
     # imgnoi (B, H, W, C), -> timeid: (B,) -> condition (B, H, W, C) or (B, S, C) -> noise (B, H, W, C)
     """_summary_
 
@@ -42,46 +43,45 @@ class NoiseEstimatorUNet(nj.Module):
     Returns:
         jax.Array: (B, Z1)
     """
-    if condition is None:
-      condition = imgnoi
     B, H, W, C = imgnoi.shape
     x = self.get("conv", nn.Conv2D, self._hidden, 1)(imgnoi)
     time_embed = self.get("time", nn.TimeEmbedding, self.thidden)(timeid)
     carries = []
 
     #### downsampling
-    dim = self._hidden * 2
+    # dim = self._hidden * 2
+    dim = self._hidden
     for s in range(self.stage):
       # two res blocks + self attention + add together
       x = self.get(f"dr{s}0", nn.ResidualTimeBlock, dim, act=self.act, group=self.group)(x, time_embed)
       x = self.get(f"dr{s}1", nn.ResidualTimeBlock, dim, act=self.act, group=self.group)(x, time_embed)
-      x = self.get(f"da{s}", nn.CrossAttentionBlock, dim, head=self.head, group=self.group)(x, condition)
+      # x = self.get(f"da{s}", nn.CrossAttentionBlock, self.ahidden, head=self.head, group=self.group)(x, condition)
       carries.append(x)
       # Downsampling
       if s != self.stage - 1:
         x = self.get(f"dd{s}", nn.Conv2D, dim, 3, stride=2)(x)
       # increase dimension
-      dim *= 2
+      # dim *= 2
 
     #### bottleneck
     x = self.get(f"br0", nn.ResidualTimeBlock, dim, act=self.act, group=self.group)(x, time_embed)
-    x = self.get(f"ba", nn.CrossAttentionBlock, dim, head=self.head, group=self.group)(x, condition)
+    x = self.get(f"ba", nn.CrossAttentionBlock, self.ahidden, head=self.head, group=self.group)(x, condition)
     x = self.get(f"br1", nn.ResidualTimeBlock, dim, act=self.act, group=self.group)(x, time_embed)
 
     #### upsampling
     # Upsampling phase
-    dim //= 2
+    # dim //= 2
     for s in reversed(range(self.stage)):
       x = jnp.concatenate([carries.pop(), x], -1)
       # two res blocks + self attention + add together
       x = self.get(f"ur{s}0", nn.ResidualTimeBlock, dim, act=self.act, group=self.group)(x, time_embed)
       x = self.get(f"ur{s}1", nn.ResidualTimeBlock, dim, act=self.act, group=self.group)(x, time_embed)
-      x = self.get(f"ua{s}", nn.CrossAttentionBlock, dim, head=self.head, group=self.group)(x, condition)
+      # x = self.get(f"ua{s}", nn.CrossAttentionBlock, self.ahidden, head=self.head, group=self.group)(x, condition)
       # Upsampling
       if s != 0:
         x = self.get(f"uu{s}", nn.Conv2D, dim, 3, stride=2, transp=True)(x)
       # decrease dimension
-      dim //= 2
+      # dim //= 2
 
     # Final ResNet block and output convolutional layer
     x = self.get(f"fr", nn.ResidualTimeBlock, self._hidden, act=self.act, group=self.group)(x, time_embed)
@@ -92,12 +92,13 @@ class NoiseEstimatorUNet(nj.Module):
 
 class Diffuser(nj.Module):
 
-  hidden: int = 8
+  hidden: int = 128
   stage: int = 3
-  head: int = 1
-  group: int = 1
-  thidden: int = 32
-  act: str = "gelu"
+  head: int = 8
+  group: int = 8
+  thidden: int = 512
+  ahidden: int = 128
+  act: str = "silu"
 
   # implement the algorithm from https://arxiv.org/pdf/2006.11239.pdf
   # adapt from: https://github.com/andylolu2/jax-diffusion/blob/main/jax_diffusion/diffusion.py
@@ -114,7 +115,7 @@ class Diffuser(nj.Module):
     self._alpha_bars = np.cumprod(self._alphas) # (T,)
     self._steps = steps # ()
     self.unet = NoiseEstimatorUNet(self.hidden, stage = self.stage, head = self.head,
-      group = self.group, thidden = self.thidden, act = self.act, name="unet")
+      group = self.group, thidden = self.thidden, ahidden=self.ahidden, act = self.act, name="unet")
 
   def forward(self, x_0: jax.Array, t: jax.Array) -> jax.Array:
     # given the image, add noise to it. See algorithm 1 in https://arxiv.org/pdf/2006.11239.pdf
@@ -131,7 +132,8 @@ class Diffuser(nj.Module):
     # x_t = x_t.clip(-1, 1)
     return x_t, eps
 
-  def reverse_step(self, x_t: jax.Array, t: jax.Array):
+  def reverse_step(self, x_t: jax.Array, xs: tuple):
+    t, cond = xs # (B,), (B,)
     """See algorithm 2 in https://arxiv.org/pdf/2006.11239.pdf"""
     B, H, W, C = x_t.shape
     (B,) = t.shape
@@ -139,21 +141,23 @@ class Diffuser(nj.Module):
     alpha_bar_t = jnp.take(self._alpha_bars, t)[:, None, None, None] # (B,) -> (B, H, W, C)
     sigma_t = jnp.sqrt(jnp.take(self._betas, t))[:, None, None, None] # (B,) -> (B, H, W, C)
     z = (t > 0)[:, None, None, None] * jax.random.normal(nj.seed(), shape=x_t.shape, dtype=x_t.dtype)
-    eps = self.unet(x_t, t)
+    eps = self.unet(x_t, t, cond[:, None, None])
     x = (1.0 / jnp.sqrt(alpha_t)) * (
       x_t - ((1 - alpha_t) / jnp.sqrt(1 - alpha_bar_t)) * eps
     ) + sigma_t * z
     # x = x.clip(-1, 1)
     return x, x
 
-  def reverse(self, x_T: jax.Array) -> jax.Array:
-    # (B, H, W, C) -> (B, H, W, C) -> (T, B, H, W, C)
+  def reverse(self, x_T: jax.Array, cond: jax.Array) -> jax.Array:
+    # (B, H, W, C) -> (B,) => (B, H, W, C) -> (T, B, H, W, C)
     B, H, W, C = x_T.shape
     # given the noise, reconstruct the image
     # For reverse, we have to reverse it one by one
     ts = jnp.arange(0, self._steps)[:, None] # (T, 1)
     ts = jnp.repeat(ts, B, axis=1) # (T, B)
-    x_hat_0, xs = nj.scan(self.reverse_step, x_T, ts, reverse=True, unroll=1, axis=0)
+    conds = jnp.repeat(cond[None], self._steps, axis=0)
+    xs = (ts, conds)
+    x_hat_0, xs = nj.scan(self.reverse_step, x_T, xs, reverse=True, unroll=1, axis=0)
     return x_hat_0, xs
   
 

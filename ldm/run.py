@@ -25,7 +25,7 @@ from embodied.nn import ninjax as nj
 from embodied import nn
 from embodied.nn import sg
 
-from .data import SingleDomainDataset
+from .data import SingleDomainDataset, ElefantDataset, TwoDomainDataset
 from .trainer import DiffusionTrainer
 
 # def fetch_async(value):
@@ -62,7 +62,12 @@ def make_trainer(config) -> DiffusionTrainer:
   return DiffusionTrainer(config, name="diff")
 
 def make_dataloader(config) -> SingleDomainDataset:
-  dataloader = SingleDomainDataset(config.dir_path, config.image_size, config.batch_size)
+  if config.dir_path == "elefant":
+    dataloader = ElefantDataset(config.image_size, config.batch_size)
+  elif config.path_A:
+    dataloader = TwoDomainDataset(config.path_A, config.path_B, config.image_size, config.batch_size)
+  else:
+    dataloader = SingleDomainDataset(config.dir_path, config.image_size, config.batch_size)
   return dataloader
 
 def setup_jax(jaxcfg):

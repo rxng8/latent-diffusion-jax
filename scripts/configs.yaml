@@ -11,7 +11,7 @@ defaults:
   jax:
     platform: gpu
     jit: True
-    compute_dtype: bfloat16
+    compute_dtype: bfloat16 # bfloat16, float32
     param_dtype: float32
     prealloc: True
     checks: False
@@ -40,25 +40,35 @@ defaults:
     timer: True
 
   # Models, Training, and Hyperparameters
-  diffuser: {beta_start: 0.0001, beta_final: 0.02, stage: 5, steps: 1000, thidden: 64, hidden: 8, head: 4, group: 4, act: gelu}
-  opt: {lr: 1e-4}
+  diffuser: {beta_start: 0.0001, beta_final: 0.02, stage: 3, steps: 1000, thidden: 512, ahidden: 128, hidden: 128, head: 8, group: 8, act: silu}
+  opt: {lr: 3e-4}
   image_size: [64, 64]
   dir_path: "/dev/null"
-  batch_size: 4
+  path_A: ""
+  path_B: ""
+  batch_size: 16
   loss_scales: {diffuser: 1.0}
 
 
 tiny:
-  diffuser: {steps: 1000, thidden: 64, hidden: 8, head: 4, group: 4}
+  diffuser: {steps: 1000, thidden: 256, ahidden: 128, hidden: 128, head: 8, group: 8}
 
 small:
-  diffuser: {steps: 1200, thidden: 128, hidden: 16, head: 8, group: 8}
+  diffuser: {steps: 1200, thidden: 512, ahidden: 256, hidden: 256, head: 8, group: 8}
 
 large:
-  diffuser: {steps: 1400, thidden: 256, hidden: 32, head: 8, group: 8}
+  diffuser: {steps: 1400, thidden: 1024, ahidden: 512, hidden: 512, head: 8, group: 8}
 
 monet:
   dir_path: "data/monet_jpg"
 
 photo:
   dir_path: "data/photo_jpg"
+
+elefant:
+  dir_path: "elefant"
+
+m2p:
+  dir_path: ""
+  path_A: "data/monet_jpg"
+  path_B: "data/photo_jpg"

@@ -54,7 +54,7 @@ class DiffusionTrainer(nj.Module):
       if len(value.shape) >= 3 and value.dtype == jnp.uint8:
         value = (nn.cast(value) / 255.0 - 0.5) * 2
       else:
-        raise NotImplementedError(f"should all be images! got dtype={value.dtype}, shape: {value.shape}")
+        value = nn.cast(value)
       result[key] = value
     return result
 
@@ -71,7 +71,9 @@ class DiffusionTrainer(nj.Module):
   def report(self, data):
     _data = self.preprocess(data)
     img_shape = data["image"].shape
-    x_0, xs = self.diffuser.reverse(jax.random.normal(nj.seed(), img_shape)) # (B, H, W, C), (T, B, H, W, C)
+    noise_img = jax.random.normal(nj.seed(), img_shape)
+    cond = jax.random.randint(nj.seed(), (self.config.batch_size,), 0, 2) # (B,)
+    x_0, xs = self.diffuser.reverse(noise_img, cond) # (B, H, W, C), (T, B, H, W, C)
     _, (outs, loss_mets) = self.loss(_data)
     mets = {}
     mets.update(loss_mets)
@@ -91,12 +93,15 @@ class DiffusionTrainer(nj.Module):
     timesteps = np.random.randint(0, self.diffuser._steps, (B,))
     timesteps = nn.cast(timesteps)
 
+    # data["class"]: (jnp.int32) (B,)
+    cond = data["class"][:, None, None] # (B, 1, 1)
+
     # Generating the noise and noisy image for this batch
     # Add noise to x_0 until timestep
     noisy_image, noise = self.diffuser.forward(x_0, timesteps)
 
     # Forward noising: given a noisy image, predict the noise added to that image
-    pred_noise = self.diffuser.unet(noisy_image, timesteps)
+    pred_noise = self.diffuser.unet(noisy_image, timesteps, cond)
 
     # l1 loss
     # loss = ((pred_noise - noise)**2).mean([-3, -2, -1]).mean()
@@ -107,12 +112,13 @@ class DiffusionTrainer(nj.Module):
 
     # metrics
     outs = {"pred_noise": pred_noise, "noise": noise, "noisy_image": noisy_image}
-    mets = self._metrics(data, losses)
+    mets = self._metrics(data, losses, timesteps)
     return model_loss, (outs, mets)
 
-  def _metrics(self, data: dict, losses: dict):
+  def _metrics(self, data: dict, losses: dict, timesteps):
     mets = {}
     for k, v in losses.items():
       mets.update(nn.tensorstats(v, prefix=f"losses/{k}"))
+    mets.update(nn.tensorstats(timesteps, prefix=f"timesteps"))
     return mets
 

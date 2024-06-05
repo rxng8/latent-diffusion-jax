@@ -25,7 +25,7 @@ from embodied.nn import ninjax as nj
 from embodied import nn
 from embodied.nn import sg
 
-from .data import SingleDomainDataset, ElefantDataset, TwoDomainDataset
+from .data import SingleDomainDataset, ElefantDataset, TwoDomainDataset, RollingDataset
 from .trainer import DiffusionTrainer
 
 # def fetch_async(value):
@@ -64,6 +64,8 @@ def make_trainer(config) -> DiffusionTrainer:
 def make_dataloader(config, mode="train") -> SingleDomainDataset:
   if config.dir_path == "elefant":
     dataloader = ElefantDataset(config, mode=mode)
+  elif config.dir_path == "rolling":
+    dataloader = RollingDataset(config, mode=mode)
   elif config.path_A:
     dataloader = TwoDomainDataset(config, mode=mode)
   else:

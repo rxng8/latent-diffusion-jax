@@ -40,12 +40,12 @@ defaults:
     timer: True
 
   # Models, Training, and Hyperparameters
-  diffuser: {stage: 3, thidden: 128, ahidden: 128, hidden: 128, head: 8, group: 8, act: silu}
+  diffuser: {stage: 3, thidden: 256, ahidden: 128, hidden: 128, head: 8, group: 8, act: silu}
   beta_sampler: {mode: linear, beta_start: 0.0001, beta_final: 0.02}
   diffuser_steps: 1000
   opt: {lr: 3e-4}
   image_size: [64, 64]
-  dir_path: "/dev/null"
+  dir_path: "rolling"
   path_A: ""
   path_B: ""
   batch_size: 16

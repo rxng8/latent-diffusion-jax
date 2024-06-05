@@ -165,3 +165,56 @@ class TwoDomainDataset:
         idx = np.random.permutation(np.arange(0, len(self.domain_A)))
         self.epoch_cnt += 1
       yield out
+
+class RollingDataset:
+  def __init__(self, config, mode="train") -> None:
+    self.path_A = (pathlib.Path(__file__).parent / "permanent_data").resolve()
+    image_size = config.image_size
+    self.H = image_size[1]
+    self.W = image_size[0]
+    self._batch_size = config.batch_size
+    self.epoch_cnt = 0
+    self._steps = config.diffuser_steps
+    self.beta_sampler = BetaSampler(config.diffuser_steps, **config.beta_sampler)
+    self._n_classes = config.n_classes
+
+    # get all image path
+    self.domain_A = []
+    for fname in os.listdir(self.path_A):
+      if self._check_image(fname):
+        self.domain_A.append(self.path_A / fname)
+    self._len_A = len(self.domain_A)
+
+  def _check_image(self, fname: str):
+    accepted = [".png", ".jpg", ".jpeg"]
+    for a in accepted:
+      if fname.endswith(a):
+        return True
+    return False
+
+  def _sample_one(self, iA):
+    # iA = np.random.randint(0, self._len_A)
+    img_A = np.asarray(Image.open(self.domain_A[iA]))
+    img_A = np.asarray(cv2.resize(img_A, (self.W, self.H))) if (self.W, self.H) != img_A.shape[:2] else img_A
+    return {"image": img_A}
+
+  def _sample(self, idx, current):
+    batch = []
+    for i in range(self._batch_size):
+      data = self._sample_one(idx[(current + i) % len(self.domain_A)])
+      batch.append(data)
+    data = {k: np.stack([batch[i][k] for i in range(self._batch_size)], 0) for k in batch[0].keys()}
+    t = np.random.randint(0, self._steps, (self._batch_size,))
+    return {**data, **self.beta_sampler(t), "class": np.zeros((self._batch_size,))}
+
+  def dataset(self):
+    idx = np.random.permutation(np.arange(0, len(self.domain_A)))
+    current = 0
+    while True:
+      out = self._sample(idx, current)
+      current += self._batch_size
+      if current >= len(self.domain_A):
+        current = 0
+        idx = np.random.permutation(np.arange(0, len(self.domain_A)))
+        self.epoch_cnt += 1
+      yield out

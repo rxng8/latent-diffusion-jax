@@ -7,7 +7,7 @@ Description: Data handling
 """
 
 from typing import List, Dict
-from abc import ABC
+from abc import ABC, abstractmethod
 import sys, pathlib
 import numpy as np
 import jax
@@ -22,12 +22,14 @@ from .beta_sampler import BetaSampler
 class Dataloader(ABC):
   def __init__(self, config, mode="train") -> None:
     self._batch_size = config.batch_size
+    self._height = config.image_size[1]
+    self._width = config.image_size[0]
     self._mode = mode
     self.config = config
     self.beta_sampler = BetaSampler(config.diffuser_steps, **config.beta_sampler)
 
-  def _sample(self):
-    raise NotImplementedError(f"() -> dict: ('image': (B, H, W, C), 'class': (B,))")
+  def sample(self):
+    raise NotImplementedError(f"() -> dict: ('image': (B, H, W, C), 'class': (B,)). Image uint8 [0, 255]")
 
   def dataset(self):
     """Given the `_sample` method, we yield data returned together with the sampled beta
@@ -35,8 +37,10 @@ class Dataloader(ABC):
 
     Yields:
       dict: {
+        # handled by subclasses
         "image": (B, H, W, C): the training image
         "class": (B,): the condition class
+        # handled by this parent class
         "t": (B,): the sampled mdp time step
         "alpha_t": (B,): the corresponding alpha at sampled time step
         "alpha_bar_t": (B,): the corresponding alpha bar at sampled time step
@@ -49,7 +53,7 @@ class Dataloader(ABC):
     """
     while True:
       t = np.random.randint(0, self.config.diffuser_steps, size=(self._batch_size,))
-      yield {**self._sample(), **self.beta_sampler(t)}
+      yield {**self.sample(), **self.beta_sampler(t)}
 
 class ElefantDataset:
   def __init__(self, config, mode="train") -> None:

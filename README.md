@@ -129,6 +129,7 @@ class CelebaHQLoader(Dataloader):
 * Then in the run, just call:
 ```python
 import sys
+from functools import partial as bind
 import embodied
 from ldm import train_eval, load_config, make_trainer
 

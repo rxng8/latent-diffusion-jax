@@ -31,23 +31,23 @@ class BetaSampler():
     return {
       "t": t, # (B,)
       **self._sample(t), # (B,)
-      **self.fulldata.copy(), # (T, B)
-      "T": self.T # (T, B)
+      **self.fulldata.copy(), # (T,)
+      "T": self.T # (T,)
     }
 
   def _sample(self, t: np.ndarray):
     # t: (B,)
     alpha_bar_t = self._alpha_bars[np.asarray(t).astype(np.int32)] # (B,)
-    alpha_t = np.take(self._alphas, t)
-    sigma_t = np.sqrt(np.take(self._betas, t))
+    alpha_t = np.take(self._alphas, t) # (B,)
+    sigma_t = np.sqrt(np.take(self._betas, t)) # (B,)
     return {
       "alpha_bar_t": alpha_bar_t,
       "alpha_t": alpha_t,
       "sigma_t": sigma_t,
     }
-  
+
   def _full(self):
     li = []
     for t in range(0, self._steps):
       li.append(self._sample(t))
-    return {k[:-2]: np.stack([li[i][k] for i in range(self._steps)]) for k in li[0].keys()} # (T, B)
+    return {k[:-2]: np.stack([li[i][k] for i in range(self._steps)]) for k in li[0].keys()} # (T,)

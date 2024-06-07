@@ -16,3 +16,10 @@ bash install.sh
 python scripts/train.py
 ```
 
+* To download the celeba-hq dataset:
+  * Go to kaggle, create a key (in setting)
+  * download the file, put in `.kaggle/kaggle.json`
+  * `mkdir -p data && cd data`
+  * do `kaggle datasets download -d lamsimon/celebahq`
+
+

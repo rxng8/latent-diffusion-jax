@@ -1,0 +1,44 @@
+batch_size: 16
+beta_sampler: {beta_final: 0.02, beta_start: 0.0001, mode: linear}
+diffuser: {act: silu, ahidden: 128, group: 8, head: 8, hidden: 128, stage: 3, thidden: 256}
+diffuser_steps: 1000
+dir_path: rolling
+expname: test
+filter: .*
+image_size: [64, 64]
+jax:
+  assert_num_devices: -1
+  checks: false
+  compute_dtype: bfloat16
+  debug: false
+  fetch_policy_carry: false
+  jit: true
+  logical_cpus: 0
+  nvidia_flags: false
+  param_dtype: float32
+  platform: gpu
+  prealloc: true
+  profiler: false
+  sync_every: 1
+  train_devices: [0]
+  transfer_guard: true
+  xla_dump: false
+logdir: logs/test
+logroot: logs
+loss_scales: {diffuser: 1.0}
+n_classes: 1
+opt: {lr: 0.0003}
+path_A: ''
+path_B: ''
+run:
+  duration: 0
+  eval_every: 180
+  from_checkpoint: ''
+  log_every: 120
+  log_zeros: true
+  save_every: 900
+  script: train
+  steps: 1000000
+  timer: true
+  usage: {gc: false, gputil: false, malloc: false, nvsmi: true, psutil: true}
+seed: 42

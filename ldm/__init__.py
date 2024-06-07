@@ -10,3 +10,4 @@ from .data import *
 from .nets import *
 from .run import *
 from .trainer import *
+from .config import load_config

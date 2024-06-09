@@ -173,8 +173,8 @@ def train_eval(make_trainer: callable, make_dataloader_train: callable, make_dat
   # Actual training loop
   while step < config.run.steps:
     # load next batch
-    with embodied.timer.section('dataset_next'):
-      batch = next(dataset_train)
+    # with embodied.timer.section('dataset_next'):
+    batch = next(dataset_train)
     
     # Train one step
     params_handler._params, (outs, mets) = train(params_handler._params, batch, seed=next_seed(train_sharded))
